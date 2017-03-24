@@ -29,7 +29,7 @@ class VAE(object):
     RESTORE_KEY = "to_restore"
 
     def __init__(self, encoder, decoder, latent_dim, d_hyperparams={}, scope='VAE', save_graph_def=True,
-                 log_dir="./log/", analysis_dir="./analysis/", model_to_restore=None):
+                 log_dir="./log/", analysis_dir=None, model_to_restore=None):
         """
         Initialiser
         :param encoder: Encoder architecture. Should be a callable object to apply to inputs
@@ -46,8 +46,6 @@ class VAE(object):
         self.sess = tf.Session()
         self.settings = VAE.DEFAULTS
         self.settings.update(**d_hyperparams)
-        self.analysis_folder = analysis_dir
-        if not os.path.exists(self.analysis_folder): os.makedirs(self.analysis_folder)
 
         if model_to_restore is None:
             print("Building new VAE model")
@@ -57,8 +55,15 @@ class VAE(object):
             self.scope = scope
 
             model_datetime = datetime.now().strftime(r"%y%m%d_%H%M")
-            self.model_folder = './training/saved_models/' + model_datetime
+            self.model_folder = './training/saved_models/' + model_datetime + '/'
             if not os.path.exists(self.model_folder): os.makedirs(self.model_folder)
+
+            if analysis_dir is None:
+                self.analysis_folder = self.model_folder + 'analysis/'
+                print('here')
+            else:
+                self.analysis_folder = analysis_dir
+            if not os.path.exists(self.analysis_folder): os.makedirs(self.analysis_folder)
 
             # Build the graph
             handles = self._build_graph()
@@ -246,22 +251,24 @@ class VAE(object):
 
                 self.accumulated_cost += cost
 
-                print("Step {}-> cost for this minibatch: {}".format(i, cost))
-                print("   minibatch KL_cost = {}, reconst = {}".format(np.mean(kl_loss), np.mean(rec_loss)))
-
                 total_cost_history = np.hstack((total_cost_history, np.array([float(cost)])))
                 KL_cost_history = np.hstack((KL_cost_history, np.array([float(kl_loss)])))
                 reconstruction_cost_history = np.hstack((reconstruction_cost_history, np.array([float(rec_loss)])))
 
-                if i % 250 == 0:
+                if i % 5000 == 0:
                     # SAVE ALL MODEL PARAMETERS
                     self.save_model(outdir)
 
-                if i % 5 == 0:
+                if i % 500 == 0:
                     # SAVE COSTS FOR LEARNING CURVES
                     np.save(self.analysis_folder + 'total_cost.npy', total_cost_history)
                     np.save(self.analysis_folder + 'KL_cost.npy', KL_cost_history)
                     np.save(self.analysis_folder + 'reconstruction_cost.npy', reconstruction_cost_history)
+
+                if i % 1000 == 0:
+                    # PRINT PROGRESS
+                    print("Step {}-> cost for this minibatch: {}".format(i, cost))
+                    print("   minibatch KL_cost = {}, reconst = {}".format(np.mean(kl_loss), np.mean(rec_loss)))
 
                 if i >= max_iter or dataset.epochs_completed >= max_epochs:
                     print("final avg cost (@ step {} = epoch {}): {}".format(
@@ -283,3 +290,15 @@ class VAE(object):
                 now = datetime.now().isoformat()[11:]
                 print("------- Training end: {} -------\n".format(now))
                 sys.exit(0)
+
+    def test(self, dataset, iterations):
+
+        for _ in range(iterations):
+            x = dataset.next_batch()  # (batch_size, n_inputs)
+            feed_dict = {self.input_ph: x}
+
+            fetches = [self.vae_output, self.cost, self.kl_loss, self.cost_no_KL, self.global_step]
+            x_reconstructed, cost, kl_loss, rec_loss, i = self.sess.run(fetches, feed_dict=feed_dict)
+
+            print(cost)
+

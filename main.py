@@ -8,6 +8,10 @@ from vae import VAE
 from data_utils import DatasetFeed
 from tensorflow.python.ops.init_ops import variance_scaling_initializer
 
+# MODEL_TO_RESTORE = 'training/saved_models/170324_1035model-100'
+MODEL_TO_RESTORE = None
+
+
 IMAGE_SIZE = 28*28
 LATENT_DIM = 2
 
@@ -41,6 +45,9 @@ if __name__ == '__main__':
                           nonlinearity=[tf.nn.elu]*(len(DECODER_ARCH)-1) + [tf.nn.sigmoid],
                           initializer=variance_scaling_initializer(scale=2.0, mode="fan_in", distribution="normal"))
 
-    vae = VAE(encoder, decoder, LATENT_DIM, d_hyperparams={}, analysis_dir="./analysis/", model_to_restore=None)
 
+    vae = VAE(encoder, decoder, LATENT_DIM, d_hyperparams={}, model_to_restore=None)
     vae.train(train_data, max_iter=MAX_ITER, max_epochs=np.inf, verbose=True, save=True)
+
+    # vae = VAE(encoder, decoder, LATENT_DIM, model_to_restore=MODEL_TO_RESTORE)
+    # vae.test(train_data, 10)  # Test the model on 10 minibatches
