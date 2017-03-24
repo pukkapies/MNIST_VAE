@@ -262,6 +262,8 @@ def save_npy_datasets():
     print(test_labels.shape)
     print(validation_labels.shape)
 
+    if not os.path.exists(curr_path + '/MNIST/'): os.makedirs(curr_path + '/MNIST/')
+
     np.save(curr_path + '/MNIST/train_images.npy', train_images[:, :, :, 0])
     np.save(curr_path + '/MNIST/train_labels.npy', train_labels)
     np.save(curr_path + '/MNIST/validation_images.npy', validation_images[:, :, :, 0])
