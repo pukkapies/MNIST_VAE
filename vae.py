@@ -138,7 +138,8 @@ class VAE(object):
             ##########################################################################
 
             # Set up gradient calculation and optimizer
-            rec_loss = tf.losses.sigmoid_cross_entropy(input_ph, vae_output)
+            # rec_loss = tf.losses.sigmoid_cross_entropy(input_ph, vae_output)
+            rec_loss = self.crossEntropy(vae_output, input_ph)
             print('rec_loss shape:', rec_loss.get_shape())  # THINK I MIGHT NEED TO TAKE A MEAN HERE
 
             # Kullback-Leibler divergence: mismatch b/w approximate vs. imposed/true posterior
@@ -147,8 +148,8 @@ class VAE(object):
 
             with tf.name_scope("cost"):
                 # average over minibatch
-                cost = rec_loss + tf.reduce_mean(kl_loss, name="vae_cost")
-                cost_no_KL = rec_loss
+                cost = tf.reduce_mean(kl_loss + rec_loss, name="vae_cost")
+                cost_no_KL = tf.reduce_mean(rec_loss, name='rec_cost')
                 cost_KL = tf.reduce_mean(kl_loss, name="KL_cost")
 
             print("Defined loss functions")
@@ -183,6 +184,16 @@ class VAE(object):
             epsilon = tf.random_normal(tf.shape(log_sigma), name="epsilon")
             self.epsilon = epsilon  ##TO REMOVE - DEBUGGING ONLY
             return mu + epsilon * tf.exp(log_sigma) # N(mu, I * sigma**2)
+
+    def crossEntropy(self, obs, actual, offset=1e-7):
+        """Binary cross-entropy, per training example"""
+        # (tf.Tensor, tf.Tensor, float) -> tf.Tensor
+        with tf.name_scope("cross_entropy"):
+            # bound by clipping to avoid nan
+            obs_ = tf.clip_by_value(obs, offset, 1 - offset)
+            return -tf.reduce_sum(actual * tf.log(obs_) +
+                                  (1 - actual) * tf.log(1 - obs_), 1)
+
 
     def kullback_leibler_diag_gaussian(self, mu, log_sigma):
         """
@@ -238,14 +249,9 @@ class VAE(object):
         while True:
             try:
                 x = dataset.next_batch()  # (batch_size, n_inputs)
-                batch_size = x[0]
-                n_inputs = x.shape[1]
 
                 feed_dict = {self.input_ph: x}
                 
-                print("Updating gradients...")
-
-
                 fetches = [self.vae_output, self.cost, self.kl_loss, self.cost_no_KL, self.global_step, self.train_op]
                 x_reconstructed, cost, kl_loss, rec_loss, i, _ = self.sess.run(fetches, feed_dict=feed_dict)
 

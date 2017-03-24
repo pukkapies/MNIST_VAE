@@ -37,4 +37,5 @@ class DatasetFeed(object):
             first_sub_batch = self.images[current_index:]  # The remainder of the current set of data points
             if shuffle_every_epoch:
                 np.random.shuffle(self.images)
-            return np.asarray(first_sub_batch + self.data[:self.current_dataset_index])
+
+            return np.vstack((first_sub_batch, self.images[:self.current_dataset_index]))

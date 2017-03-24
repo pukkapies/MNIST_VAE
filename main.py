@@ -20,7 +20,8 @@ DECODER_ARCH = [400, 600, IMAGE_SIZE]  # Takes LATENT_DIM units as input
 
 MINIBATCH_SIZE = 128
 
-MAX_ITER = 100
+MAX_ITER = 100000
+HYPERPARAMS = {'learning_rate': 5E-4}
 
 curr_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -46,7 +47,7 @@ if __name__ == '__main__':
                           initializer=variance_scaling_initializer(scale=2.0, mode="fan_in", distribution="normal"))
 
 
-    vae = VAE(encoder, decoder, LATENT_DIM, d_hyperparams={}, model_to_restore=None)
+    vae = VAE(encoder, decoder, LATENT_DIM, d_hyperparams=HYPERPARAMS, model_to_restore=None)
     vae.train(train_data, max_iter=MAX_ITER, max_epochs=np.inf, verbose=True, save=True)
 
     # vae = VAE(encoder, decoder, LATENT_DIM, model_to_restore=MODEL_TO_RESTORE)
