@@ -1,0 +1,16 @@
+*.wav
+*.png
+*.aif
+*.npy
+*.jpg
+*.jpeg
+*.xml
+*.pyc
+*.DS_Store
+
+log/
+training/saved_models/
+__pycache__/
+MNIST/
+MNIST-data/
+.idea/
