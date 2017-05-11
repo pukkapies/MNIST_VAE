@@ -60,7 +60,6 @@ class VAE(object):
 
             if analysis_dir is None:
                 self.analysis_folder = self.model_folder + 'analysis/'
-                print('here')
             else:
                 self.analysis_folder = analysis_dir
             if not os.path.exists(self.analysis_folder): os.makedirs(self.analysis_folder)
@@ -131,6 +130,7 @@ class VAE(object):
             self.z = z ## TO REMOVE - DEBUGGING ONLY
 
             vae_output = self.decoder(z)  # (batch_size, n_outputs)
+            print("vae output shape: ", vae_output.get_shape())
 
             print("Finished setting up decoder")
             print([var._variable for var in tf.global_variables()])
@@ -212,7 +212,7 @@ class VAE(object):
         a.k.a. inference network q(z|x)
         """
         # np.array -> [float, float]
-        feed_dict = {self.input_placeholder: x}
+        feed_dict = {self.input_ph: x}
         return self.sess.run([self.z_mean, self.z_log_sigma], feed_dict=feed_dict)
 
     def decode(self, zs=None):
@@ -298,7 +298,7 @@ class VAE(object):
                 sys.exit(0)
 
     def test(self, dataset, iterations):
-
+        print("Some example test minibatch costs: ")
         for _ in range(iterations):
             x = dataset.next_batch()  # (batch_size, n_inputs)
             feed_dict = {self.input_ph: x}
