@@ -201,7 +201,7 @@ class VAE(object):
             graph_scope.reuse_variables()  # No new variables should be created from this point on
             x_reconstructed_ = self.decoder(z_)
 
-            return (input_ph, z_mean, z_log_sigma, vae_output, z_, x_reconstructed_, cost,
+            return (input_ph, ar_mean, ar_logsigma, vae_output, z_, x_reconstructed_, cost,
                     train_op, cost_no_KL, cost_KL, global_step)
 
     def sampleGaussian(self, mu, log_sigma):

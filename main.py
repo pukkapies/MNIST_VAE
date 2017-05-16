@@ -10,7 +10,7 @@ from data_utils import DatasetFeed
 from tensorflow.python.ops.init_ops import variance_scaling_initializer
 import matplotlib.pyplot as plt
 
-# MODEL_TO_RESTORE = 'training/saved_models/170324_1145/model-980000'
+# MODEL_TO_RESTORE = 'training/saved_models/170516_2144/model-100000'
 MODEL_TO_RESTORE = None
 
 
@@ -22,7 +22,7 @@ DECODER_ARCH = [400, 600, IMAGE_SIZE]  # Takes LATENT_DIM units as input
 
 MINIBATCH_SIZE = 128
 
-MAX_ITER = 100000
+MAX_ITER = 1000000
 HYPERPARAMS = {'learning_rate': 5E-4}
 
 curr_path = os.path.dirname(os.path.abspath(__file__))
@@ -55,7 +55,6 @@ if __name__ == '__main__':
     else:
         vae = VAE(encoder, decoder, LATENT_DIM, model_to_restore=MODEL_TO_RESTORE)
         vae.test(train_data, 10)  # Test the model on 10 minibatches
-
 
         ###################### MAKE PLOTS ##########################
         PLOT_DIR = vae.model_folder + 'plots/'
