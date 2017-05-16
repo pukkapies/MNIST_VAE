@@ -24,7 +24,7 @@ def get_linear_ar_mask(n_in, n_out, zerodiagonal=False):
 
 class AR_Dense(object):
     """Autoregressive linear layer. Can be applied to Tensors of shape (batch_size, n_inputs)"""
-    def __init__(self, size, initializer, zerodiagonal, scope="dense_layer", nonlinearity=tf.identity):
+    def __init__(self, size, initializer, zerodiagonal, scope="ar_layer", nonlinearity=tf.identity):
         self.scope = scope
         self.size = size
         self.nonlinearity = nonlinearity

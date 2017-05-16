@@ -122,7 +122,7 @@ class VAE(object):
             z_log_sigma = Dense(scope="z_log_sigma", size=self.latent_dim,
                                 initializer=variance_scaling_initializer(scale=2.0, mode="fan_in", distribution="normal"))(prelatent_layer)
 
-            prior = DiagonalGaussian(np.zeros(shape=(self.latent_dim)), np.ones(shape=(self.latent_dim)))  # N(0, 1)
+            prior = DiagonalGaussian(tf.zeros(self.latent_dim), tf.ones(self.latent_dim))  # N(0, 1)
             posterior = DiagonalGaussian(z_mean, z_log_sigma)
 
             print("Finished setting up encoder")
@@ -132,6 +132,7 @@ class VAE(object):
             print('z_log_sigma shape: ', z_log_sigma.get_shape())
 
             z = posterior.sample()
+            print("Posterior sample shape: ", z.get_shape())
 
             # z = self.sampleGaussian(z_mean, z_log_sigma)  # (batch_size, latent_dim)
             self.z = z ## TO REMOVE - DEBUGGING ONLY
@@ -141,11 +142,11 @@ class VAE(object):
             # IAF Posterior
             # Create two AR layers
             z = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
-                         zerodiagonal=False)(z)
+                         zerodiagonal=False, scope='ar_layer1')(z)
             ar_mean = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
-                          zerodiagonal=True)(z)
+                          zerodiagonal=True, scope='ar_layer2_mean')(z)
             ar_logsigma = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
-                          zerodiagonal=True)(z)
+                          zerodiagonal=True, scope='ar_layer2_logsd')(z)
 
             z = (z - ar_mean) / tf.exp(ar_logsigma)
             print("Post AR z.shape", z.get_shape())
