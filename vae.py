@@ -6,6 +6,8 @@ import numpy as np
 import tensorflow as tf
 from layers import Dense
 from tensorflow.python.ops.init_ops import variance_scaling_initializer
+from distributions import DiagonalGaussian
+from ar_layers import AR_Dense
 
 #TODO: Pass this in in the initialization somehow
 IMAGE_SIZE = 28*28  # For MNIST
@@ -120,14 +122,39 @@ class VAE(object):
             z_log_sigma = Dense(scope="z_log_sigma", size=self.latent_dim,
                                 initializer=variance_scaling_initializer(scale=2.0, mode="fan_in", distribution="normal"))(prelatent_layer)
 
+            prior = DiagonalGaussian(np.zeros(shape=(self.latent_dim)), np.ones(shape=(self.latent_dim)))  # N(0, 1)
+            posterior = DiagonalGaussian(z_mean, z_log_sigma)
+
             print("Finished setting up encoder")
             print([var._variable for var in tf.global_variables()])
 
             print('z_mean shape: ', z_mean.get_shape())
             print('z_log_sigma shape: ', z_log_sigma.get_shape())
 
-            z = self.sampleGaussian(z_mean, z_log_sigma)  # (batch_size, latent_dim)
+            z = posterior.sample()
+
+            # z = self.sampleGaussian(z_mean, z_log_sigma)  # (batch_size, latent_dim)
             self.z = z ## TO REMOVE - DEBUGGING ONLY
+
+            logqs = posterior.logprob(z)
+
+            # IAF Posterior
+            # Create two AR layers
+            z = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
+                         zerodiagonal=False)(z)
+            ar_mean = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
+                          zerodiagonal=True)(z)
+            ar_logsigma = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
+                          zerodiagonal=True)(z)
+
+            z = (z - ar_mean) / tf.exp(ar_logsigma)
+            print("Post AR z.shape", z.get_shape())
+
+            logqs += ar_logsigma
+            logps = prior.logprob(z)
+            kl_obj = logqs - logps
+
+            kl_obj = tf.reduce_sum(kl_obj, [1])
 
             vae_output = self.decoder(z)  # (batch_size, n_outputs)
             print("vae output shape: ", vae_output.get_shape())
@@ -142,15 +169,15 @@ class VAE(object):
             rec_loss = self.crossEntropy(vae_output, input_ph)
             print('rec_loss shape:', rec_loss.get_shape())  # THINK I MIGHT NEED TO TAKE A MEAN HERE
 
-            # Kullback-Leibler divergence: mismatch b/w approximate vs. imposed/true posterior
-            kl_loss = self.kullback_leibler_diag_gaussian(z_mean, z_log_sigma)
-            print('kl_loss shape:', kl_loss.get_shape())
+            # # Kullback-Leibler divergence: mismatch b/w approximate vs. imposed/true posterior
+            # kl_loss = self.kullback_leibler_diag_gaussian(z_mean, z_log_sigma)
+            # print('kl_loss shape:', kl_loss.get_shape())
 
             with tf.name_scope("cost"):
                 # average over minibatch
-                cost = tf.reduce_mean(kl_loss + rec_loss, name="vae_cost")
+                cost = tf.reduce_mean(kl_obj + rec_loss, name="vae_cost")
                 cost_no_KL = tf.reduce_mean(rec_loss, name='rec_cost')
-                cost_KL = tf.reduce_mean(kl_loss, name="KL_cost")
+                cost_KL = tf.reduce_mean(kl_obj, name="KL_cost")
 
             print("Defined loss functions")
 
