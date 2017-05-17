@@ -29,6 +29,7 @@ class VAE(object):
         "learning_rate": 1E-3
     }
     RESTORE_KEY = "to_restore"
+    DEBUG_KEY = 'debug_'
 
     def __init__(self, encoder, decoder, latent_dim, d_hyperparams={}, scope='VAE', save_graph_def=True,
                  log_dir="./log/", analysis_dir=None, model_to_restore=None):
@@ -91,7 +92,7 @@ class VAE(object):
             self.logger = tf.summary.FileWriter(log_dir, self.sess.graph)
 
     def unpack_handles(self, handles):
-        (self.input_ph, self.z_mean, self.z_log_sigma, self.vae_output, self.z_,
+        (self.input_ph, self.ar_mean, self.ar_logsigma, self.vae_output, self.z_,
          self.x_reconstructed_, self.cost, self.train_op, self.cost_no_KL, self.kl_loss, self.global_step) = handles
 
     @property
@@ -125,6 +126,9 @@ class VAE(object):
             prior = DiagonalGaussian(tf.zeros(self.latent_dim), tf.ones(self.latent_dim))  # N(0, 1)
             posterior = DiagonalGaussian(z_mean, z_log_sigma)
 
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z_mean', z_mean)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z_log_sigma', z_log_sigma)
+
             print("Finished setting up encoder")
             print([var._variable for var in tf.global_variables()])
 
@@ -137,23 +141,48 @@ class VAE(object):
             # z = self.sampleGaussian(z_mean, z_log_sigma)  # (batch_size, latent_dim)
             self.z = z ## TO REMOVE - DEBUGGING ONLY
 
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z', z)
+
             logqs = posterior.logprob(z)
 
             # IAF Posterior
             # Create two AR layers
-            z = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
-                         zerodiagonal=False, scope='ar_layer1')(z)
-            ar_mean = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
-                          zerodiagonal=True, scope='ar_layer2_mean')(z)
-            ar_logsigma = AR_Dense(self.latent_dim, variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
-                          zerodiagonal=True, scope='ar_layer2_logsd')(z)
+            first_AR_Dense = AR_Dense(self.latent_dim,
+                                      variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
+                                      zerodiagonal=False, scope='ar_layer1', nonlinearity=tf.nn.elu)
+            second_AR_Dense_to_mean = AR_Dense(self.latent_dim,
+                                               variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
+                                               zerodiagonal=True, scope='ar_layer2_mean')
+            second_AR_Dense_to_logsigma = AR_Dense(self.latent_dim,
+                                                   variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
+                                                   zerodiagonal=True, scope='ar_layer2_logsd')
+
+            hidden_AR_layer = first_AR_Dense(z)
+            ar_mean = second_AR_Dense_to_mean(hidden_AR_layer)
+            ar_logsigma = second_AR_Dense_to_logsigma(hidden_AR_layer)
+
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_mean', ar_mean)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_logsigma', ar_logsigma)
+
+            # self.ar_mean = ar_mean  # for debugging
+            # self.ar_logsigma = ar_logsigma  # for debugging
 
             z = (z - ar_mean) / tf.exp(ar_logsigma)
             print("Post AR z.shape", z.get_shape())
 
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z', z)
+
+            self.first_ar_layer_weights = first_AR_Dense.w  # for debugging
+            self.second_ar_layer_weights_mean = second_AR_Dense_to_mean.w  # for debugging
+            self.second_ar_layer_weights_logsigma = second_AR_Dense_to_logsigma.w  # for debugging
+
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer1_w', first_AR_Dense.w)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_mean_w', second_AR_Dense_to_mean.w)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_logsd_w', second_AR_Dense_to_logsigma.w)
+
             logqs += ar_logsigma
             logps = prior.logprob(z)
-            kl_obj = logqs - logps
+            kl_obj = logqs - logps  # (batch_size, latent_dim)
 
             kl_obj = tf.reduce_sum(kl_obj, [1])
 
@@ -169,6 +198,7 @@ class VAE(object):
             # rec_loss = tf.losses.sigmoid_cross_entropy(input_ph, vae_output)
             rec_loss = self.crossEntropy(vae_output, input_ph)
             print('rec_loss shape:', rec_loss.get_shape())  # THINK I MIGHT NEED TO TAKE A MEAN HERE
+            print('kl_obj shape:', kl_obj.get_shape())
 
             # # Kullback-Leibler divergence: mismatch b/w approximate vs. imposed/true posterior
             # kl_loss = self.kullback_leibler_diag_gaussian(z_mean, z_log_sigma)
@@ -241,7 +271,7 @@ class VAE(object):
         """
         # np.array -> [float, float]
         feed_dict = {self.input_ph: x}
-        return self.sess.run([self.z_mean, self.z_log_sigma], feed_dict=feed_dict)
+        return self.sess.run([self.ar_mean, self.ar_logsigma], feed_dict=feed_dict)
 
     def decode(self, zs=None):
         """Generative decoder from latent space to reconstructions of input space;
@@ -282,6 +312,18 @@ class VAE(object):
                 
                 fetches = [self.vae_output, self.cost, self.kl_loss, self.cost_no_KL, self.global_step, self.train_op]
                 x_reconstructed, cost, kl_loss, rec_loss, i, _ = self.sess.run(fetches, feed_dict=feed_dict)
+
+                print("AR first layer weight matrix:")
+                print(self.sess.run([self.first_ar_layer_weights], feed_dict=feed_dict))
+                print("AR second layer weight matrix to mean:")
+                print(self.sess.run([self.second_ar_layer_weights_mean], feed_dict=feed_dict))
+                print("AR second layer weight matrix to logsigma:")
+                print(self.sess.run([self.second_ar_layer_weights_logsigma], feed_dict=feed_dict))
+
+                print("AR mean:")
+                print(self.sess.run([self.ar_mean], feed_dict=feed_dict))
+                print("AR logsigma:")
+                print(self.sess.run([self.ar_logsigma], feed_dict=feed_dict))
 
                 self.accumulated_cost += cost
 
@@ -336,3 +378,70 @@ class VAE(object):
 
             print(cost)
 
+            for variable in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
+                # if 'ar_layer1' in variable:
+                if 'ar_layer1/W:0' in variable.name:
+                    ar_layer1_w = variable
+                elif 'ar_layer2_mean/W:0' in variable.name:
+                    ar_layer2_mean_w = variable
+                elif 'ar_layer2_logsd/W:0' in variable.name:
+                    ar_layer2_logsd_w = variable
+                # print(variable.name)
+
+            for op in self.sess.graph.get_operations():
+                if 'ar_layer2_mean/Identity' in op.name:
+                    ar_mean = op
+                    print(ar_mean.values())
+                    print("ar_mean:")
+                    ar_mean_eval = self.sess.run(ar_mean.values(), feed_dict)[0]
+                elif 'ar_layer2_logsd/Identity' in op.name:
+                    ar_logsigma = op
+                    print('ar_logsigma:')
+                    ar_logsigma_eval = self.sess.run(ar_logsigma.values(), feed_dict)[0]
+                elif 'VAE/z_mean/Identity' in op.name:
+                    z_mean = op
+                    print('z_mean:')
+                    z_mean_eval = self.sess.run(z_mean.values(), feed_dict=feed_dict)[0]
+                elif 'VAE/z_log_sigma/Identity' in op.name:
+                    z_log_sigma = op
+                    print('z_log_sigma:')
+                    z_log_sigma_eval = self.sess.run(z_log_sigma.values(), feed_dict=feed_dict)[0]
+
+            print('z_mean:')
+            print(z_mean_eval)
+            print('ar_mean:')
+            print(ar_mean_eval)
+
+            print("IAF transformed z_means:")
+            transformed_z = (z_mean_eval - ar_mean_eval) / np.exp(z_log_sigma_eval)
+            print(transformed_z)
+            print("Mean of transformed z:")
+            print(np.mean(transformed_z, axis=0))
+            print("SD of transformed z:")
+            print(np.sqrt(np.var(transformed_z, axis=0)))
+
+            print("AR first layer weight matrix:")
+            print(self.sess.run(ar_layer1_w, feed_dict=feed_dict))
+            print("AR second layer weight matrix to mean:")
+            print(self.sess.run(ar_layer2_mean_w, feed_dict=feed_dict))
+            print("AR second layer weight matrix to logsigma:")
+            print(self.sess.run(ar_layer2_logsd_w, feed_dict=feed_dict))
+
+            for op in self.sess.graph.get_operations():
+                if 'VAE/ar_layer1/mul' == op.name:
+                    ar_layer1_w_masked = op
+                    ar_layer1_w_masked_eval = self.sess.run(ar_layer1_w_masked.values(), feed_dict)
+                    print("ar_layer1_w_masked:")
+                    print(ar_layer1_w_masked_eval)
+                elif 'VAE/ar_layer2_mean/mul' == op.name:
+                    ar_layer2_mean_w_masked = op
+                    ar_layer2_mean_w_masked_eval = self.sess.run(ar_layer2_mean_w_masked.values(), feed_dict)
+                    print("ar_layer2_mean_w_masked:")
+                    print(ar_layer2_mean_w_masked_eval)
+                elif 'VAE/ar_layer2_logsd/mul' == op.name:
+                    ar_layer2_logsd_w_masked = op
+                    ar_layer2_logsd_w_masked_eval = self.sess.run(ar_layer2_logsd_w_masked.values(), feed_dict)
+                    print("ar_layer2_logsd_w_masked:")
+                    print(ar_layer2_logsd_w_masked_eval)
+
+            sadfasdf
