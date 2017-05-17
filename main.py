@@ -22,7 +22,7 @@ DECODER_ARCH = [400, 600, IMAGE_SIZE]  # Takes LATENT_DIM units as input
 
 MINIBATCH_SIZE = 128
 
-MAX_ITER = 1000000
+MAX_ITER = 500000
 HYPERPARAMS = {'learning_rate': 5E-4}
 
 curr_path = os.path.dirname(os.path.abspath(__file__))
