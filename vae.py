@@ -443,5 +443,3 @@ class VAE(object):
                     ar_layer2_logsd_w_masked_eval = self.sess.run(ar_layer2_logsd_w_masked.values(), feed_dict)
                     print("ar_layer2_logsd_w_masked:")
                     print(ar_layer2_logsd_w_masked_eval)
-
-            sadfasdf
