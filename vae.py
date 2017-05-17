@@ -313,17 +313,17 @@ class VAE(object):
                 fetches = [self.vae_output, self.cost, self.kl_loss, self.cost_no_KL, self.global_step, self.train_op]
                 x_reconstructed, cost, kl_loss, rec_loss, i, _ = self.sess.run(fetches, feed_dict=feed_dict)
 
-                print("AR first layer weight matrix:")
-                print(self.sess.run([self.first_ar_layer_weights], feed_dict=feed_dict))
-                print("AR second layer weight matrix to mean:")
-                print(self.sess.run([self.second_ar_layer_weights_mean], feed_dict=feed_dict))
-                print("AR second layer weight matrix to logsigma:")
-                print(self.sess.run([self.second_ar_layer_weights_logsigma], feed_dict=feed_dict))
-
-                print("AR mean:")
-                print(self.sess.run([self.ar_mean], feed_dict=feed_dict))
-                print("AR logsigma:")
-                print(self.sess.run([self.ar_logsigma], feed_dict=feed_dict))
+                # print("AR first layer weight matrix:")
+                # print(self.sess.run([self.first_ar_layer_weights], feed_dict=feed_dict))
+                # print("AR second layer weight matrix to mean:")
+                # print(self.sess.run([self.second_ar_layer_weights_mean], feed_dict=feed_dict))
+                # print("AR second layer weight matrix to logsigma:")
+                # print(self.sess.run([self.second_ar_layer_weights_logsigma], feed_dict=feed_dict))
+                #
+                # print("AR mean:")
+                # print(self.sess.run([self.ar_mean], feed_dict=feed_dict))
+                # print("AR logsigma:")
+                # print(self.sess.run([self.ar_logsigma], feed_dict=feed_dict))
 
                 self.accumulated_cost += cost
 
