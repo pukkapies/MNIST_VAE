@@ -12,8 +12,8 @@ from make_plots import plot_reconstruction, plot_in_latent_space, plot_dataset_e
 from utils.data_utils import DatasetFeed
 from vae import VAE
 
-# MODEL_TO_RESTORE = 'training/saved_models/170518_2135/model-80000'
-MODEL_TO_RESTORE = None
+MODEL_TO_RESTORE = 'training/saved_models/170518_2135/model-415000 (3 layer IAF)'
+# MODEL_TO_RESTORE = None
 
 
 IMAGE_SIZE = 28*28
@@ -26,7 +26,7 @@ MINIBATCH_SIZE = 128
 
 MAX_ITER = 500000
 HYPERPARAMS = {'learning_rate': 5E-4}
-MODEL_NAME = '4D_latent'
+MODEL_NAME = ' (4D_latent)'
 
 curr_path = os.path.dirname(os.path.abspath(__file__))
 
