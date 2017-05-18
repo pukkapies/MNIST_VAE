@@ -83,7 +83,8 @@ class VAE(object):
             print('Restoring model: ', model_to_restore)
             self.model_folder = '/'.join((model_to_restore.split('/')[:-1])) + '/'
             self.settings_folder = self.model_folder + 'settings/'
-            self.settings = json.load(self.settings_folder + 'settings.json')
+            with open(self.settings_folder + 'settings.json') as json_file:
+                self.settings = json.load(json_file)
 
             # Rebuild the graph
             meta_graph = os.path.abspath(model_to_restore)
@@ -95,18 +96,18 @@ class VAE(object):
             self.logger = tf.summary.FileWriter(log_dir, self.sess.graph)
 
     def unpack_handles(self):
-        self.input_ph = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'input_ph')
-        self.ar_mean = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'ar_mean')
-        self.ar_logsigma = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'ar_logsigma')
-        self.vae_output = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'vae_output')
-        self.zT = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'zT')
-        self.z_ = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'z_')
-        self.x_reconstructed_ = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'x_reconstructed_')
-        self.cost = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'cost')
-        self.train_op = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'train_op')
-        self.rec_loss = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'rec_loss')
-        self.kl_loss = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'kl_loss')
-        self.global_step = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'global_step')
+        self.input_ph = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'input_ph')[0]
+        self.ar_mean = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'ar_mean')[0]
+        self.ar_logsigma = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'ar_logsigma')[0]
+        self.vae_output = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'vae_output')[0]
+        self.zT = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'zT')[0]
+        self.z_ = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'z_')[0]
+        self.x_reconstructed_ = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'x_reconstructed')[0]
+        self.cost = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'cost')[0]
+        self.train_op = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'train_op')[0]
+        self.rec_loss = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'rec_loss')[0]
+        self.kl_loss = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'kl_loss')[0]
+        self.global_step = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'global_step')[0]
         return
 
     @property
@@ -416,28 +417,29 @@ class VAE(object):
 
             print(cost)
 
-            z_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z_mean')
-            z_log_sigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z_log_sigma')
-            z0 = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z0')
-            zT = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'zT')
+            z_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z0_mean')[0]
+            z_log_sigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z0_log_sigma')[0]
+            z0 = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z0')[0]
+            zT = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'zT')[0]
 
-            ar_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_mean')
-            ar_logsigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_logsigma')
-            ar_layer1_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer1_w')
-            ar_layer1_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer1_b')
-            ar_layer2_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_w')
-            ar_layer2_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_b')
-            ar_layer_mean_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_mean_w')
-            ar_layer_mean_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_mean_b')
-            ar_layer_logsd_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_w')
-            ar_layer_logsd_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_b')
+            ar_mean = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'ar_mean')[0]
+            ar_logsigma = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'ar_logsigma')[0]
+
+            ar_layer1_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer1_w')[0]
+            ar_layer1_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer1_b')[0]
+            ar_layer2_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_w')[0]
+            ar_layer2_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_b')[0]
+            ar_layer_mean_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_mean_w')[0]
+            ar_layer_mean_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_mean_b')[0]
+            ar_layer_logsd_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_w')[0]
+            ar_layer_logsd_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_b')[0]
 
             # Evaluate the above tensors
-            z0_sample = self.sess.run(z0, feed_dict)[0]
-            zT_sample = self.sess.run(zT, feed_dict)[0]  # Final Posterior approximation
-            zT_2nd_sample = self.sess.run(zT, feed_dict)[0]
-            ar_mean_eval = self.sess.run(ar_mean, feed_dict)[0]
-            ar_logsigma_eval = self.sess.run(ar_logsigma, feed_dict)[0]
+            z0_sample = self.sess.run(z0, feed_dict)
+            zT_sample = self.sess.run(zT, feed_dict)  # Final Posterior approximation
+            zT_2nd_sample = self.sess.run(zT, feed_dict)
+            ar_mean_eval = self.sess.run(ar_mean, feed_dict)
+            ar_logsigma_eval = self.sess.run(ar_logsigma, feed_dict)
 
             ar_layer1_w_eval = self.sess.run(ar_layer1_w)
             ar_layer1_b_eval = self.sess.run(ar_layer1_b)
@@ -463,7 +465,7 @@ class VAE(object):
             print(ar_logsigma_eval)
 
 
-            if self.settings['latent_dim'] == 2:
+            if self.settings['latent_dim'] == 2 and iterations==1:
                 import matplotlib.pyplot as plt
 
                 plt.figure()
