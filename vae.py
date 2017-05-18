@@ -8,6 +8,8 @@ from layers import Dense
 from tensorflow.python.ops.init_ops import variance_scaling_initializer
 from distributions import DiagonalGaussian
 from ar_layers import AR_Dense
+from utils.training_utils import create_json
+import json
 
 #TODO: Pass this in in the initialization somehow
 IMAGE_SIZE = 28*28  # For MNIST
@@ -32,7 +34,7 @@ class VAE(object):
     DEBUG_KEY = 'debug_'
 
     def __init__(self, encoder, decoder, latent_dim, d_hyperparams={}, scope='VAE', save_graph_def=True,
-                 log_dir="./log/", analysis_dir=None, model_to_restore=None):
+                 model_name=None, log_dir="./log/", analysis_dir=None, model_to_restore=None):
         """
         Initialiser
         :param encoder: Encoder architecture. Should be a callable object to apply to inputs
@@ -47,7 +49,10 @@ class VAE(object):
                many of the former build options are ignored
         """
         self.sess = tf.Session()
-        self.settings = VAE.DEFAULTS
+        self.settings = VAE.DEFAULTS.update({'encoder_settings': encoder.settings,
+                                             'decoder_settings': decoder.settings,
+                                             'latent_dim': latent_dim,
+                                             'scope': scope})
         self.settings.update(**d_hyperparams)
 
         if model_to_restore is None:
@@ -57,9 +62,13 @@ class VAE(object):
             self.latent_dim = latent_dim
             self.scope = scope
 
+            self.model_name = '' if model_name is None else model_name
             model_datetime = datetime.now().strftime(r"%y%m%d_%H%M")
-            self.model_folder = './training/saved_models/' + model_datetime + '/'
+            self.model_folder = './training/saved_models/' + model_datetime + self.model_name + '/'
             if not os.path.exists(self.model_folder): os.makedirs(self.model_folder)
+
+            self.settings_folder = self.model_folder + 'settings/'
+            if not os.path.exists(self.settings_folder): os.makedirs(self.settings_folder)
 
             if analysis_dir is None:
                 self.analysis_folder = self.model_folder + 'analysis/'
@@ -72,6 +81,8 @@ class VAE(object):
         else:
             print('Restoring model: ', model_to_restore)
             self.model_folder = '/'.join((model_to_restore.split('/')[:-1])) + '/'
+            self.settings_folder = self.model_folder + 'settings/'
+            self.settings = json.load(self.settings_folder + 'settings.json')
 
             # Rebuild the graph
             meta_graph = os.path.abspath(model_to_restore)
@@ -107,6 +118,7 @@ class VAE(object):
         try:
             outfile = outdir + 'model'
             self.saver.save(self.sess, outfile, global_step=self.step)
+            create_json(self.settings_folder + 'settings.json', self.settings)
         except AttributeError:
             print("Failed to save model at step {}".format(self.step))
             return
@@ -319,6 +331,7 @@ class VAE(object):
 
         outdir = self.model_folder
         self.accumulated_cost = 0
+        self.best_cost = np.inf
 
         now = datetime.now().isoformat()[11:]
         print("------- Training begin: {} -------\n".format(now))
@@ -345,6 +358,10 @@ class VAE(object):
                 # print(self.sess.run([self.ar_logsigma], feed_dict=feed_dict))
 
                 self.accumulated_cost += cost
+                if cost < self.best_cost:
+                    self.best_cost = cost
+                    self.settings['best_cost'] = {'ELBO': cost, 'KL(q(z|x) || p(z))': kl_loss,
+                                                  'reconstruction_loss': rec_loss}
 
                 total_cost_history = np.hstack((total_cost_history, np.array([float(cost)])))
                 KL_cost_history = np.hstack((KL_cost_history, np.array([float(kl_loss)])))
@@ -444,7 +461,7 @@ class VAE(object):
             print(ar_logsigma_eval)
 
 
-            if False:
+            if self.settings['latent_dim'] == 2:
                 import matplotlib.pyplot as plt
 
                 plt.figure()
