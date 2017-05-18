@@ -35,6 +35,8 @@ class Dense(object):
         self.size = size
         self.nonlinearity = nonlinearity
         self.initializer = initializer
+        self.settings = {'type': 'Dense', 'layer_size': size, 'nonlinearity': nonlinearity.__name__,
+                         'initializer': initializer.__name__, 'scope': scope}
 
     def __call__(self, x):
         with tf.variable_scope(self.scope):
@@ -58,6 +60,8 @@ class FeedForward(object):
         """
         assert sizes, "Need to specify layer sizes for Feedforward architecture"
         assert nonlinearity, "Need to specify nonlinearity for Feedforward architecture"
+        self.settings = {'type': 'FeedForward', 'layer_sizes': sizes, 'nonlinearity': nonlinearity.__name__,
+                         'initializer': initializer.__name__, 'scope': scope}
         self.sizes = sizes[::-1]  # !! Reverse the order for function composition
         if type(nonlinearity) == list:
             assert len(nonlinearity) == len(sizes)
