@@ -17,7 +17,7 @@ MODEL_TO_RESTORE = None
 
 
 IMAGE_SIZE = 28*28
-LATENT_DIM = 4
+LATENT_DIM = 2
 
 ENCODER_ARCH = [600, 400]  # Takes IMG_SIZE units as input
 DECODER_ARCH = [400, 600, IMAGE_SIZE]  # Takes LATENT_DIM units as input
