@@ -28,7 +28,7 @@ class VAE(object):
     DEFAULTS = {
         "learning_rate": 1E-3
     }
-    RESTORE_KEY = "to_restore"
+    RESTORE_KEY = "to_restore_"
     DEBUG_KEY = 'debug_'
 
     def __init__(self, encoder, decoder, latent_dim, d_hyperparams={}, scope='VAE', save_graph_def=True,
@@ -67,14 +67,8 @@ class VAE(object):
                 self.analysis_folder = analysis_dir
             if not os.path.exists(self.analysis_folder): os.makedirs(self.analysis_folder)
 
-            # Build the graph
-            handles = self._build_graph()
-            for handle in handles:
-                tf.add_to_collection(VAE.RESTORE_KEY, handle)
+            self._build_graph()
             self.sess.run(tf.global_variables_initializer())
-
-            # unpack handles for tensor ops to feed or fetch
-            self.unpack_handles(handles)
         else:
             print('Restoring model: ', model_to_restore)
             self.model_folder = '/'.join((model_to_restore.split('/')[:-1])) + '/'
@@ -83,17 +77,25 @@ class VAE(object):
             meta_graph = os.path.abspath(model_to_restore)
             tf.train.import_meta_graph(meta_graph + ".meta").restore(self.sess, meta_graph)
 
-            handles = self.sess.graph.get_collection(VAE.RESTORE_KEY)
-
-            print("Restored handles: ", handles)
-            self.unpack_handles(handles)
+            self.unpack_handles()
 
         if save_graph_def:  # tensorboard
             self.logger = tf.summary.FileWriter(log_dir, self.sess.graph)
 
-    def unpack_handles(self, handles):
-        (self.input_ph, self.ar_mean, self.ar_logsigma, self.vae_output, self.zT, self.z_,
-         self.x_reconstructed_, self.cost, self.train_op, self.cost_no_KL, self.kl_loss, self.global_step) = handles
+    def unpack_handles(self):
+        self.input_ph = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'input_ph')
+        self.ar_mean = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'ar_mean')
+        self.ar_logsigma = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'ar_logsigma')
+        self.vae_output = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'vae_output')
+        self.zT = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'zT')
+        self.z_ = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'z_')
+        self.x_reconstructed_ = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'x_reconstructed_')
+        self.cost = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'cost')
+        self.train_op = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'train_op')
+        self.cost_no_KL = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'cost_no_KL')
+        self.kl_loss = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'kl_loss')
+        self.global_step = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'global_step')
+        return
 
     @property
     def step(self):
@@ -111,12 +113,14 @@ class VAE(object):
 
     def _build_graph(self):
         with tf.variable_scope(self.scope) as graph_scope:
-            input_ph = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE])  # (batch_size, n_inputs)
-            print("input shape: ", input_ph.get_shape())
+            self.input_ph = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE])  # (batch_size, n_inputs)
+            tf.add_to_collection(VAE.RESTORE_KEY + "input_ph", self.input_ph)
+            print("input shape: ", self.input_ph.get_shape())
 
-            global_step = tf.Variable(0, trainable=False, name="global_step")
+            self.global_step = tf.Variable(0, trainable=False, name="global_step")
+            tf.add_to_collection(VAE.RESTORE_KEY + "global_step", self.global_step)
 
-            prelatent_layer = self.encoder(input_ph)
+            prelatent_layer = self.encoder(self.input_ph)
 
             z0_mean = Dense(scope="z0_mean", size=self.latent_dim,
                            initializer=variance_scaling_initializer(scale=2.0, mode="fan_in", distribution="normal"))(prelatent_layer)
@@ -161,19 +165,18 @@ class VAE(object):
             z2 = second_AR_Dense(z1)
             ar_mean = AR_Dense_to_mean(z2)
             ar_logsigma = AR_Dense_to_logsigma(z2)
-
-            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_mean', ar_mean)
-            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_logsigma', ar_logsigma)
+            tf.add_to_collection(VAE.RESTORE_KEY + "ar_mean", ar_mean)
+            tf.add_to_collection(VAE.RESTORE_KEY + "ar_logsigma", ar_logsigma)
 
             # self.ar_mean = ar_mean  # for debugging
             # self.ar_logsigma = ar_logsigma  # for debugging
 
             zT = (z0 - ar_mean) / tf.exp(ar_logsigma)
+            tf.add_to_collection(VAE.RESTORE_KEY + 'zT', zT)
             print("Post AR z.shape", zT.get_shape())
 
             tf.add_to_collection(VAE.DEBUG_KEY + 'z1', z1)
             tf.add_to_collection(VAE.DEBUG_KEY + 'z2', z2)
-            tf.add_to_collection(VAE.DEBUG_KEY + 'zT', zT)
 
             self.first_ar_layer_weights = first_AR_Dense.w  # for debugging
             self.second_ar_layer_weights_mean = AR_Dense_to_mean.w  # for debugging
@@ -196,6 +199,8 @@ class VAE(object):
             kl_obj = tf.reduce_sum(kl_obj, [1])
 
             vae_output = self.decoder(zT)  # (batch_size, n_outputs)
+            tf.add_to_collection(VAE.RESTORE_KEY + "vae_output", vae_output)
+
             print("vae output shape: ", vae_output.get_shape())
 
             print("Finished setting up decoder")
@@ -205,7 +210,7 @@ class VAE(object):
 
             # Set up gradient calculation and optimizer
             # rec_loss = tf.losses.sigmoid_cross_entropy(input_ph, vae_output)
-            rec_loss = self.crossEntropy(vae_output, input_ph)
+            rec_loss = self.crossEntropy(vae_output, self.input_ph)
             print('rec_loss shape:', rec_loss.get_shape())  # THINK I MIGHT NEED TO TAKE A MEAN HERE
             print('kl_obj shape:', kl_obj.get_shape())
 
@@ -215,19 +220,23 @@ class VAE(object):
 
             with tf.name_scope("cost"):
                 # average over minibatch
-                cost = tf.reduce_mean(kl_obj + rec_loss, name="vae_cost")
-                cost_no_KL = tf.reduce_mean(rec_loss, name='rec_cost')
-                cost_KL = tf.reduce_mean(kl_obj, name="KL_cost")
+                self.cost = tf.reduce_mean(kl_obj + rec_loss, name="vae_cost")
+                tf.add_to_collection(VAE.RESTORE_KEY + "cost", self.cost)
+                self.cost_no_KL = tf.reduce_mean(rec_loss, name='rec_cost')
+                tf.add_to_collection(VAE.RESTORE_KEY + "cost_no_KL", self.cost_no_KL)
+                self.cost_KL = tf.reduce_mean(kl_obj, name="KL_cost")
+                tf.add_to_collection(VAE.RESTORE_KEY + "cost_KL", self.cost_KL)
 
             print("Defined loss functions")
 
             # optimization
             optimizer = tf.train.AdamOptimizer(learning_rate=self.settings['learning_rate'])
             tvars = tf.trainable_variables()
-            grads_and_vars = optimizer.compute_gradients(cost, tvars)
+            grads_and_vars = optimizer.compute_gradients(self.cost, tvars)
             clipped = [(tf.clip_by_value(grad, -5, 5), tvar)  # gradient clipping
                        for grad, tvar in grads_and_vars]
-            train_op = optimizer.apply_gradients(clipped, global_step=global_step, name="minimize_cost")
+            self.train_op = optimizer.apply_gradients(clipped, global_step=self.global_step, name="minimize_cost")
+            tf.add_to_collection(VAE.RESTORE_KEY + "train_op", self.train_op)
             print("Defined training ops")
 
             print([var._variable for var in tf.global_variables()])
@@ -237,11 +246,12 @@ class VAE(object):
             with tf.name_scope("latent_in"):
                 z_ = tf.placeholder_with_default(tf.random_normal([1, self.latent_dim]), shape=[1, self.latent_dim],
                                                  name="latent_in")
+                tf.add_to_collection(VAE.RESTORE_KEY + "z_", z_)
             graph_scope.reuse_variables()  # No new variables should be created from this point on
             x_reconstructed_ = self.decoder(z_)
+            tf.add_to_collection(VAE.RESTORE_KEY + "x_reconstructed", x_reconstructed_)
 
-            return (input_ph, ar_mean, ar_logsigma, vae_output, zT, z_, x_reconstructed_, cost,
-                    train_op, cost_no_KL, cost_KL, global_step)
+            return
 
     def sampleGaussian(self, mu, log_sigma):
         """Draw sample from Gaussian with given shape, subject to random noise epsilon"""
@@ -434,7 +444,7 @@ class VAE(object):
             print(ar_logsigma_eval)
 
 
-            if self.latent_dim == 2:
+            if False:
                 import matplotlib.pyplot as plt
 
                 plt.figure()

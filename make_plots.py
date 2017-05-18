@@ -75,8 +75,8 @@ def plot_reconstruction(x_in, x_reconstructed, n=10, save=True, outdir="."):
 
 
 def plot_in_latent_space(model, x_in, labels, save=True, outdir="."):
-    mus, _ = model.encode(x_in)
-    ys, xs = mus.T
+    zTs = model.encode(x_in)
+    ys, xs = zTs.T
 
     plt.figure()
     plt.title("Latent encodings of VAE")
@@ -111,8 +111,8 @@ def plot_generation(model, z_in, x_in, labels, save=True, outdir='.', filename="
     generation = model.decode(z_in)
     generation = generation.reshape(1, 28, 28)
 
-    mus, _ = model.encode(x_in)
-    ys, xs = mus.T
+    zTs = model.encode(x_in)
+    ys, xs = zTs.T
 
     plt.figure(figsize=(12, 6))
     gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])

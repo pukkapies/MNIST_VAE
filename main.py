@@ -10,8 +10,8 @@ from data_utils import DatasetFeed
 from tensorflow.python.ops.init_ops import variance_scaling_initializer
 import matplotlib.pyplot as plt
 
-# MODEL_TO_RESTORE = 'training/saved_models/170518_1427/model-165000'
-MODEL_TO_RESTORE = None
+MODEL_TO_RESTORE = 'training/saved_models/170518_1455/model-100000'
+# MODEL_TO_RESTORE = None
 
 
 IMAGE_SIZE = 28*28
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         plot_reconstruction(data_minibatch, vae_reconstruction, n=8, outdir=PLOT_DIR)
         print('done.')
 
-        if vae.latent_dim == 2:
+        if True:
             # Plots of encodings in latent space
             data_minibatch_images, data_minibatch_labels = train_data.next_batch(images_only=False, minibatch_size=1000)
             print("Generating plots for latent space encodings...", end="")
