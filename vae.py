@@ -92,7 +92,7 @@ class VAE(object):
             self.logger = tf.summary.FileWriter(log_dir, self.sess.graph)
 
     def unpack_handles(self, handles):
-        (self.input_ph, self.ar_mean, self.ar_logsigma, self.vae_output, self.z_,
+        (self.input_ph, self.ar_mean, self.ar_logsigma, self.vae_output, self.zT, self.z_,
          self.x_reconstructed_, self.cost, self.train_op, self.cost_no_KL, self.kl_loss, self.global_step) = handles
 
     @property
@@ -168,12 +168,12 @@ class VAE(object):
             # self.ar_mean = ar_mean  # for debugging
             # self.ar_logsigma = ar_logsigma  # for debugging
 
-            z3 = (z0 - ar_mean) / tf.exp(ar_logsigma)
-            print("Post AR z.shape", z3.get_shape())
+            zT = (z0 - ar_mean) / tf.exp(ar_logsigma)
+            print("Post AR z.shape", zT.get_shape())
 
             tf.add_to_collection(VAE.DEBUG_KEY + 'z1', z1)
             tf.add_to_collection(VAE.DEBUG_KEY + 'z2', z2)
-            tf.add_to_collection(VAE.DEBUG_KEY + 'z3', z3)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'zT', zT)
 
             self.first_ar_layer_weights = first_AR_Dense.w  # for debugging
             self.second_ar_layer_weights_mean = AR_Dense_to_mean.w  # for debugging
@@ -190,12 +190,12 @@ class VAE(object):
             tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_b', AR_Dense_to_logsigma.b)
 
             logqs += ar_logsigma
-            logps = prior.logprob(z3)
+            logps = prior.logprob(zT)
             kl_obj = logqs - logps  # (batch_size, latent_dim)
 
             kl_obj = tf.reduce_sum(kl_obj, [1])
 
-            vae_output = self.decoder(z3)  # (batch_size, n_outputs)
+            vae_output = self.decoder(zT)  # (batch_size, n_outputs)
             print("vae output shape: ", vae_output.get_shape())
 
             print("Finished setting up decoder")
@@ -240,7 +240,7 @@ class VAE(object):
             graph_scope.reuse_variables()  # No new variables should be created from this point on
             x_reconstructed_ = self.decoder(z_)
 
-            return (input_ph, ar_mean, ar_logsigma, vae_output, z_, x_reconstructed_, cost,
+            return (input_ph, ar_mean, ar_logsigma, vae_output, zT, z_, x_reconstructed_, cost,
                     train_op, cost_no_KL, cost_KL, global_step)
 
     def sampleGaussian(self, mu, log_sigma):
@@ -280,7 +280,7 @@ class VAE(object):
         """
         # np.array -> [float, float]
         feed_dict = {self.input_ph: x}
-        return self.sess.run([self.ar_mean, self.ar_logsigma], feed_dict=feed_dict)
+        return self.sess.run(self.zT, feed_dict=feed_dict)
 
     def decode(self, zs=None):
         """Generative decoder from latent space to reconstructions of input space;
@@ -390,7 +390,7 @@ class VAE(object):
             z_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z_mean')
             z_log_sigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z_log_sigma')
             z0 = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z0')
-            z3 = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z3')
+            zT = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'zT')
 
             ar_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_mean')
             ar_logsigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_logsigma')
@@ -404,9 +404,9 @@ class VAE(object):
             ar_layer_logsd_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_b')
 
             # Evaluate the above tensors
-            z0_sample = self.sess.run(z0, feed_dict)
-            z3_sample = self.sess.run(z3, feed_dict)  # Final Posterior approximation
-            z3_2nd_sample = self.sess.run(z3, feed_dict)
+            z0_sample = self.sess.run(z0, feed_dict)[0]
+            zT_sample = self.sess.run(zT, feed_dict)[0]  # Final Posterior approximation
+            zT_2nd_sample = self.sess.run(zT, feed_dict)[0]
             ar_mean_eval = self.sess.run(ar_mean, feed_dict)[0]
             ar_logsigma_eval = self.sess.run(ar_logsigma, feed_dict)[0]
 
@@ -417,12 +417,12 @@ class VAE(object):
             ar_layer_logsd_w_eval = self.sess.run(ar_layer_logsd_w)
             ar_layer_logsd_b_eval = self.sess.run(ar_layer_logsd_b)
 
-            print('ar_layer1_w:\n', ar_layer1_w_eval)
-            print('ar_layer1_b:\n', ar_layer1_b_eval)
-            print('ar_layer_mean_w:\n', ar_layer_mean_w_eval)
-            print('ar_layer_mean_b:\n', ar_layer_mean_b_eval)
-            print('ar_layer_logsd_w:\n', ar_layer_logsd_w_eval)
-            print('ar_layer_logsd_b:\n', ar_layer_logsd_b_eval)
+            # print('ar_layer1_w:\n', ar_layer1_w_eval)
+            # print('ar_layer1_b:\n', ar_layer1_b_eval)
+            # print('ar_layer_mean_w:\n', ar_layer_mean_w_eval)
+            # print('ar_layer_mean_b:\n', ar_layer_mean_b_eval)
+            # print('ar_layer_logsd_w:\n', ar_layer_logsd_w_eval)
+            # print('ar_layer_logsd_b:\n', ar_layer_logsd_b_eval)
 
             print("")
             print("************")
@@ -448,22 +448,22 @@ class VAE(object):
                        loc='upper right')
 
             plt.figure()
-            plt.title("z3 of VAE")
+            plt.title("zT of VAE")
             colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
             scatter_pts = []  # To store a list of np.arrays for each digit
             for i in range(10):
                 idx = (labels == i)
-                scatter_pts.append(plt.scatter(z3_sample[idx, 0], z3_sample[idx, 1], color=colours[i], alpha=0.8))
+                scatter_pts.append(plt.scatter(zT_sample[idx, 0], zT_sample[idx, 1], color=colours[i], alpha=0.8))
             plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
                        loc='upper right')
 
             plt.figure()
-            plt.title("z3 (2nd sample) of VAE")
+            plt.title("zT (2nd sample) of VAE")
             colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
             scatter_pts = []  # To store a list of np.arrays for each digit
             for i in range(10):
                 idx = (labels == i)
-                scatter_pts.append(plt.scatter(z3_2nd_sample[idx, 0], z3_2nd_sample[idx, 1], color=colours[i], alpha=0.8))
+                scatter_pts.append(plt.scatter(zT_2nd_sample[idx, 0], zT_2nd_sample[idx, 1], color=colours[i], alpha=0.8))
             plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
                        loc='upper right')
 
