@@ -434,37 +434,37 @@ class VAE(object):
             print(ar_logsigma_eval)
 
 
+            if self.latent_dim == 2:
+                import matplotlib.pyplot as plt
 
-            import matplotlib.pyplot as plt
+                plt.figure()
+                plt.title("z0 of VAE")
+                colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
+                scatter_pts = []  # To store a list of np.arrays for each digit
+                for i in range(10):
+                    idx = (labels == i)
+                    scatter_pts.append(plt.scatter(z0_sample[idx, 0], z0_sample[idx, 1], color=colours[i], alpha=0.8))
+                plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+                           loc='upper right')
 
-            plt.figure()
-            plt.title("z0 of VAE")
-            colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
-            scatter_pts = []  # To store a list of np.arrays for each digit
-            for i in range(10):
-                idx = (labels == i)
-                scatter_pts.append(plt.scatter(z0_sample[idx, 0], z0_sample[idx, 1], color=colours[i], alpha=0.8))
-            plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-                       loc='upper right')
+                plt.figure()
+                plt.title("zT of VAE")
+                colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
+                scatter_pts = []  # To store a list of np.arrays for each digit
+                for i in range(10):
+                    idx = (labels == i)
+                    scatter_pts.append(plt.scatter(zT_sample[idx, 0], zT_sample[idx, 1], color=colours[i], alpha=0.8))
+                plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+                           loc='upper right')
 
-            plt.figure()
-            plt.title("zT of VAE")
-            colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
-            scatter_pts = []  # To store a list of np.arrays for each digit
-            for i in range(10):
-                idx = (labels == i)
-                scatter_pts.append(plt.scatter(zT_sample[idx, 0], zT_sample[idx, 1], color=colours[i], alpha=0.8))
-            plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-                       loc='upper right')
+                plt.figure()
+                plt.title("zT (2nd sample) of VAE")
+                colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
+                scatter_pts = []  # To store a list of np.arrays for each digit
+                for i in range(10):
+                    idx = (labels == i)
+                    scatter_pts.append(plt.scatter(zT_2nd_sample[idx, 0], zT_2nd_sample[idx, 1], color=colours[i], alpha=0.8))
+                plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+                           loc='upper right')
 
-            plt.figure()
-            plt.title("zT (2nd sample) of VAE")
-            colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
-            scatter_pts = []  # To store a list of np.arrays for each digit
-            for i in range(10):
-                idx = (labels == i)
-                scatter_pts.append(plt.scatter(zT_2nd_sample[idx, 0], zT_2nd_sample[idx, 1], color=colours[i], alpha=0.8))
-            plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-                       loc='upper right')
-
-            plt.show()
+                plt.show()

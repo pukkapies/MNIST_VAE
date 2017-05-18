@@ -15,7 +15,7 @@ MODEL_TO_RESTORE = None
 
 
 IMAGE_SIZE = 28*28
-LATENT_DIM = 2
+LATENT_DIM = 4
 
 ENCODER_ARCH = [600, 400]  # Takes IMG_SIZE units as input
 DECODER_ARCH = [400, 600, IMAGE_SIZE]  # Takes LATENT_DIM units as input
@@ -80,46 +80,47 @@ if __name__ == '__main__':
         plot_reconstruction(data_minibatch, vae_reconstruction, n=8, outdir=PLOT_DIR)
         print('done.')
 
-        # Plots of encodings in latent space
-        data_minibatch_images, data_minibatch_labels = train_data.next_batch(images_only=False, minibatch_size=1000)
-        print("Generating plots for latent space encodings...", end="")
-        plot_in_latent_space(vae, data_minibatch_images, labels=data_minibatch_labels, outdir=PLOT_DIR)
-        print('done.')
+        if vae.latent_dim == 2:
+            # Plots of encodings in latent space
+            data_minibatch_images, data_minibatch_labels = train_data.next_batch(images_only=False, minibatch_size=1000)
+            print("Generating plots for latent space encodings...", end="")
+            plot_in_latent_space(vae, data_minibatch_images, labels=data_minibatch_labels, outdir=PLOT_DIR)
+            print('done.')
 
-        # plt.figure()
-        # print(data_minibatch_images.shape)
-        # data_reshaped = data_minibatch_images.reshape(1000, 28, 28)
-        # for j in range(4):
-        #     plt.subplot(2, 2, j+1)
-        #     plt.imshow(data_reshaped[j,:, :])
-        #     print('Label: ', data_minibatch_labels[j])
-        # plt.show()
+            # plt.figure()
+            # print(data_minibatch_images.shape)
+            # data_reshaped = data_minibatch_images.reshape(1000, 28, 28)
+            # for j in range(4):
+            #     plt.subplot(2, 2, j+1)
+            #     plt.imshow(data_reshaped[j,:, :])
+            #     print('Label: ', data_minibatch_labels[j])
+            # plt.show()
 
 
-        print("Making generated figures for given latent variable...", end="")
-        # plot_generation(vae, np.array([[-0.3, -0.3]]), data_minibatch_images, data_minibatch_labels,
-        #                 outdir=PLOT_DIR, filename="Example generations 1.png")
-        # plot_generation(vae, np.array([[-2, -3]]), data_minibatch_images, data_minibatch_labels,
-        #                 outdir=PLOT_DIR, filename="Example generations 2.png")
-        # plot_generation(vae, np.array([[1.4, 2.5]]), data_minibatch_images, data_minibatch_labels,
-        #                 outdir=PLOT_DIR, filename="Example generations 3.png")
-        # plot_generation(vae, np.array([[1.7, -0.1]]), data_minibatch_images, data_minibatch_labels,
-        #                 outdir=PLOT_DIR, filename="Example generations 4.png")
-        # plot_generation(vae, np.array([[2.5, 0]]), data_minibatch_images, data_minibatch_labels,
-        #                 outdir=PLOT_DIR, filename="Example generations 5.png")
+            print("Making generated figures for given latent variable...", end="")
+            # plot_generation(vae, np.array([[-0.3, -0.3]]), data_minibatch_images, data_minibatch_labels,
+            #                 outdir=PLOT_DIR, filename="Example generations 1.png")
+            # plot_generation(vae, np.array([[-2, -3]]), data_minibatch_images, data_minibatch_labels,
+            #                 outdir=PLOT_DIR, filename="Example generations 2.png")
+            # plot_generation(vae, np.array([[1.4, 2.5]]), data_minibatch_images, data_minibatch_labels,
+            #                 outdir=PLOT_DIR, filename="Example generations 3.png")
+            # plot_generation(vae, np.array([[1.7, -0.1]]), data_minibatch_images, data_minibatch_labels,
+            #                 outdir=PLOT_DIR, filename="Example generations 4.png")
+            # plot_generation(vae, np.array([[2.5, 0]]), data_minibatch_images, data_minibatch_labels,
+            #                 outdir=PLOT_DIR, filename="Example generations 5.png")
 
-        plot_generation(vae, np.array([[-0.3, -0.3]]), data_minibatch_images, data_minibatch_labels,
-                        outdir=PLOT_DIR, filename="Example generations 1.png")
-        plot_generation(vae, np.array([[-2, -3]]), data_minibatch_images, data_minibatch_labels,
-                        outdir=PLOT_DIR, filename="Example generations 2.png")
-        plot_generation(vae, np.array([[1.4, 2.5]]), data_minibatch_images, data_minibatch_labels,
-                        outdir=PLOT_DIR, filename="Example generations 3.png")
-        plot_generation(vae, np.array([[1.7, -0.1]]), data_minibatch_images, data_minibatch_labels,
-                        outdir=PLOT_DIR, filename="Example generations 4.png")
-        plot_generation(vae, np.array([[2.5, 0]]), data_minibatch_images, data_minibatch_labels,
-                        outdir=PLOT_DIR, filename="Example generations 5.png")
+            plot_generation(vae, np.array([[-0.3, -0.3]]), data_minibatch_images, data_minibatch_labels,
+                            outdir=PLOT_DIR, filename="Example generations 1.png")
+            plot_generation(vae, np.array([[-2, -3]]), data_minibatch_images, data_minibatch_labels,
+                            outdir=PLOT_DIR, filename="Example generations 2.png")
+            plot_generation(vae, np.array([[1.4, 2.5]]), data_minibatch_images, data_minibatch_labels,
+                            outdir=PLOT_DIR, filename="Example generations 3.png")
+            plot_generation(vae, np.array([[1.7, -0.1]]), data_minibatch_images, data_minibatch_labels,
+                            outdir=PLOT_DIR, filename="Example generations 4.png")
+            plot_generation(vae, np.array([[2.5, 0]]), data_minibatch_images, data_minibatch_labels,
+                            outdir=PLOT_DIR, filename="Example generations 5.png")
 
-        print('done.')
+            print('done.')
 
         print("Making movie...", end="")
         number_of_cycles = 10
