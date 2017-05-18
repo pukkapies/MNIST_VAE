@@ -1,14 +1,16 @@
 from __future__ import absolute_import, print_function, division
+
 import os
+
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.ops.init_ops import variance_scaling_initializer
+
 from get_mnist import save_npy_datasets
 from layers import FeedForward
-from make_plots import plot_reconstruction, plot_in_latent_space, plot_dataset_examples, plot_generation, plot_generation_movie, plot_generation_movie_subplots
+from make_plots import plot_reconstruction, plot_in_latent_space, plot_dataset_examples, plot_generation, plot_generation_movie
+from utils.data_utils import DatasetFeed
 from vae import VAE
-from data_utils import DatasetFeed
-from tensorflow.python.ops.init_ops import variance_scaling_initializer
-import matplotlib.pyplot as plt
 
 MODEL_TO_RESTORE = 'training/saved_models/170518_1455/model-100000'
 # MODEL_TO_RESTORE = None
@@ -80,7 +82,7 @@ if __name__ == '__main__':
         plot_reconstruction(data_minibatch, vae_reconstruction, n=8, outdir=PLOT_DIR)
         print('done.')
 
-        if True:
+        if vae.settings['latent_dim'] == 2:
             # Plots of encodings in latent space
             data_minibatch_images, data_minibatch_labels = train_data.next_batch(images_only=False, minibatch_size=1000)
             print("Generating plots for latent space encodings...", end="")
