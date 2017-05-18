@@ -49,7 +49,8 @@ class VAE(object):
                many of the former build options are ignored
         """
         self.sess = tf.Session()
-        self.settings = VAE.DEFAULTS.update({'encoder_settings': encoder.settings,
+        self.settings = VAE.DEFAULTS
+        self.settings.update({'encoder_settings': encoder.settings,
                                              'decoder_settings': decoder.settings,
                                              'latent_dim': latent_dim,
                                              'scope': scope})
@@ -103,7 +104,7 @@ class VAE(object):
         self.x_reconstructed_ = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'x_reconstructed_')
         self.cost = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'cost')
         self.train_op = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'train_op')
-        self.cost_no_KL = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'cost_no_KL')
+        self.rec_loss = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'rec_loss')
         self.kl_loss = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'kl_loss')
         self.global_step = self.sess.graph.get_collection(VAE.RESTORE_KEY + 'global_step')
         return
@@ -210,10 +211,10 @@ class VAE(object):
 
             kl_obj = tf.reduce_sum(kl_obj, [1])
 
-            vae_output = self.decoder(zT)  # (batch_size, n_outputs)
-            tf.add_to_collection(VAE.RESTORE_KEY + "vae_output", vae_output)
+            self.vae_output = self.decoder(zT)  # (batch_size, n_outputs)
+            tf.add_to_collection(VAE.RESTORE_KEY + "vae_output", self.vae_output)
 
-            print("vae output shape: ", vae_output.get_shape())
+            print("vae output shape: ", self.vae_output.get_shape())
 
             print("Finished setting up decoder")
             print([var._variable for var in tf.global_variables()])
@@ -222,7 +223,7 @@ class VAE(object):
 
             # Set up gradient calculation and optimizer
             # rec_loss = tf.losses.sigmoid_cross_entropy(input_ph, vae_output)
-            rec_loss = self.crossEntropy(vae_output, self.input_ph)
+            rec_loss = self.crossEntropy(self.vae_output, self.input_ph)
             print('rec_loss shape:', rec_loss.get_shape())  # THINK I MIGHT NEED TO TAKE A MEAN HERE
             print('kl_obj shape:', kl_obj.get_shape())
 
@@ -232,12 +233,12 @@ class VAE(object):
 
             with tf.name_scope("cost"):
                 # average over minibatch
-                self.cost = tf.reduce_mean(kl_obj + rec_loss, name="vae_cost")
+                self.cost = tf.reduce_mean(kl_obj + rec_loss, name="cost")
                 tf.add_to_collection(VAE.RESTORE_KEY + "cost", self.cost)
-                self.cost_no_KL = tf.reduce_mean(rec_loss, name='rec_cost')
-                tf.add_to_collection(VAE.RESTORE_KEY + "cost_no_KL", self.cost_no_KL)
-                self.cost_KL = tf.reduce_mean(kl_obj, name="KL_cost")
-                tf.add_to_collection(VAE.RESTORE_KEY + "cost_KL", self.cost_KL)
+                self.rec_loss = tf.reduce_mean(rec_loss, name='rec_loss')
+                tf.add_to_collection(VAE.RESTORE_KEY + "rec_loss", self.rec_loss)
+                self.kl_loss = tf.reduce_mean(kl_obj, name="kl_loss")
+                tf.add_to_collection(VAE.RESTORE_KEY + "kl_loss", self.kl_loss)
 
             print("Defined loss functions")
 
@@ -342,7 +343,7 @@ class VAE(object):
 
                 feed_dict = {self.input_ph: x}
                 
-                fetches = [self.vae_output, self.cost, self.kl_loss, self.cost_no_KL, self.global_step, self.train_op]
+                fetches = [self.vae_output, self.cost, self.kl_loss, self.rec_loss, self.global_step, self.train_op]
                 x_reconstructed, cost, kl_loss, rec_loss, i, _ = self.sess.run(fetches, feed_dict=feed_dict)
 
                 # print("AR first layer weight matrix:")
@@ -409,7 +410,7 @@ class VAE(object):
             x, labels = dataset.next_batch(images_only=False)  # (batch_size, n_inputs)
             feed_dict = {self.input_ph: x}
 
-            fetches = [self.vae_output, self.cost, self.kl_loss, self.cost_no_KL, self.global_step]
+            fetches = [self.vae_output, self.cost, self.kl_loss, self.rec_loss, self.global_step]
             x_reconstructed, cost, kl_loss, rec_loss, i = self.sess.run(fetches, feed_dict=feed_dict)
 
             print(cost)

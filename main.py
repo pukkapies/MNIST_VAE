@@ -44,7 +44,7 @@ if __name__ == '__main__':
     train_data = DatasetFeed(training_images, training_labels, MINIBATCH_SIZE)
 
     # Define encoder network
-    encoder = FeedForward(scope="encoder", sizes=ENCODER_ARCH, nonlinearity=tf.nn.elu,
+    encoder = FeedForward(scope="encoder", sizes=ENCODER_ARCH, nonlinearity=[tf.nn.elu] * len(ENCODER_ARCH),
                           initializer=variance_scaling_initializer(scale=2.0, mode="fan_in", distribution="normal"))
     decoder = FeedForward(scope="decoder", sizes=DECODER_ARCH,
                           nonlinearity=[tf.nn.elu]*(len(DECODER_ARCH)-1) + [tf.nn.sigmoid],
