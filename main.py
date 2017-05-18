@@ -12,12 +12,12 @@ from make_plots import plot_reconstruction, plot_in_latent_space, plot_dataset_e
 from utils.data_utils import DatasetFeed
 from vae import VAE
 
-# MODEL_TO_RESTORE = 'training/saved_models/170518_1455/model-100000'
+# MODEL_TO_RESTORE = 'training/saved_models/170518_2135/model-80000'
 MODEL_TO_RESTORE = None
 
 
 IMAGE_SIZE = 28*28
-LATENT_DIM = 2
+LATENT_DIM = 4
 
 ENCODER_ARCH = [600, 400]  # Takes IMG_SIZE units as input
 DECODER_ARCH = [400, 600, IMAGE_SIZE]  # Takes LATENT_DIM units as input
@@ -26,6 +26,7 @@ MINIBATCH_SIZE = 128
 
 MAX_ITER = 500000
 HYPERPARAMS = {'learning_rate': 5E-4}
+MODEL_NAME = '4D_latent'
 
 curr_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -52,7 +53,7 @@ if __name__ == '__main__':
 
 
     if MODEL_TO_RESTORE is None:
-        vae = VAE(encoder, decoder, LATENT_DIM, d_hyperparams=HYPERPARAMS, model_to_restore=None)
+        vae = VAE(encoder, decoder, LATENT_DIM, d_hyperparams=HYPERPARAMS, model_name=MODEL_NAME, model_to_restore=None)
         vae.train(train_data, max_iter=MAX_ITER, max_epochs=np.inf, verbose=True, save=True)
     else:
         vae = VAE(encoder, decoder, LATENT_DIM, model_to_restore=MODEL_TO_RESTORE)
