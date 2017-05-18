@@ -177,8 +177,12 @@ class VAE(object):
             self.second_ar_layer_weights_logsigma = second_AR_Dense_to_logsigma.w  # for debugging
 
             tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer1_w', first_AR_Dense.w)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer1_b', first_AR_Dense.b)
+            
             tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_mean_w', second_AR_Dense_to_mean.w)
             tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_logsd_w', second_AR_Dense_to_logsigma.w)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_mean_b', second_AR_Dense_to_mean.b)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_logsd_b', second_AR_Dense_to_logsigma.b)
 
             logqs += ar_logsigma
             logps = prior.logprob(z)
@@ -378,68 +382,19 @@ class VAE(object):
 
             print(cost)
 
-            for variable in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
-                # if 'ar_layer1' in variable:
-                if 'ar_layer1/W:0' in variable.name:
-                    ar_layer1_w = variable
-                elif 'ar_layer2_mean/W:0' in variable.name:
-                    ar_layer2_mean_w = variable
-                elif 'ar_layer2_logsd/W:0' in variable.name:
-                    ar_layer2_logsd_w = variable
-                # print(variable.name)
+            z_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z_mean')
+            z_log_sigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z_log_sigma')
+            z = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z')
+            ar_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_mean')
+            ar_logsigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_logsigma')
+            z = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z')
+            ar_layer1_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer1_w')
+            ar_layer2_mean_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_mean_w')
+            ar_layer2_logsd_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_logsd_w')
 
-            for op in self.sess.graph.get_operations():
-                if 'ar_layer2_mean/Identity' in op.name:
-                    ar_mean = op
-                    print(ar_mean.values())
-                    print("ar_mean:")
-                    ar_mean_eval = self.sess.run(ar_mean.values(), feed_dict)[0]
-                elif 'ar_layer2_logsd/Identity' in op.name:
-                    ar_logsigma = op
-                    print('ar_logsigma:')
-                    ar_logsigma_eval = self.sess.run(ar_logsigma.values(), feed_dict)[0]
-                elif 'VAE/z_mean/Identity' in op.name:
-                    z_mean = op
-                    print('z_mean:')
-                    z_mean_eval = self.sess.run(z_mean.values(), feed_dict=feed_dict)[0]
-                elif 'VAE/z_log_sigma/Identity' in op.name:
-                    z_log_sigma = op
-                    print('z_log_sigma:')
-                    z_log_sigma_eval = self.sess.run(z_log_sigma.values(), feed_dict=feed_dict)[0]
+            # print(self.sess.run(z_mean, feed_dict=feed_dict))
+            print(self.sess.run(ar_layer1_w))
+            print(self.sess.run(ar_layer2_mean_w))
 
-            print('z_mean:')
-            print(z_mean_eval)
-            print('ar_mean:')
-            print(ar_mean_eval)
-
-            print("IAF transformed z_means:")
-            transformed_z = (z_mean_eval - ar_mean_eval) / np.exp(z_log_sigma_eval)
-            print(transformed_z)
-            print("Mean of transformed z:")
-            print(np.mean(transformed_z, axis=0))
-            print("SD of transformed z:")
-            print(np.sqrt(np.var(transformed_z, axis=0)))
-
-            print("AR first layer weight matrix:")
-            print(self.sess.run(ar_layer1_w, feed_dict=feed_dict))
-            print("AR second layer weight matrix to mean:")
-            print(self.sess.run(ar_layer2_mean_w, feed_dict=feed_dict))
-            print("AR second layer weight matrix to logsigma:")
-            print(self.sess.run(ar_layer2_logsd_w, feed_dict=feed_dict))
-
-            for op in self.sess.graph.get_operations():
-                if 'VAE/ar_layer1/mul' == op.name:
-                    ar_layer1_w_masked = op
-                    ar_layer1_w_masked_eval = self.sess.run(ar_layer1_w_masked.values(), feed_dict)
-                    print("ar_layer1_w_masked:")
-                    print(ar_layer1_w_masked_eval)
-                elif 'VAE/ar_layer2_mean/mul' == op.name:
-                    ar_layer2_mean_w_masked = op
-                    ar_layer2_mean_w_masked_eval = self.sess.run(ar_layer2_mean_w_masked.values(), feed_dict)
-                    print("ar_layer2_mean_w_masked:")
-                    print(ar_layer2_mean_w_masked_eval)
-                elif 'VAE/ar_layer2_logsd/mul' == op.name:
-                    ar_layer2_logsd_w_masked = op
-                    ar_layer2_logsd_w_masked_eval = self.sess.run(ar_layer2_logsd_w_masked.values(), feed_dict)
-                    print("ar_layer2_logsd_w_masked:")
-                    print(ar_layer2_logsd_w_masked_eval)
+            print(self.sess.run(ar_mean, feed_dict=feed_dict))
+            asdfasdf

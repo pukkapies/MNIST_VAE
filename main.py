@@ -10,7 +10,7 @@ from data_utils import DatasetFeed
 from tensorflow.python.ops.init_ops import variance_scaling_initializer
 import matplotlib.pyplot as plt
 
-MODEL_TO_RESTORE = 'training/saved_models/170517_0738/model-390000'
+MODEL_TO_RESTORE = 'training/saved_models/170517_2314/model-500000'
 # MODEL_TO_RESTORE = None
 
 
