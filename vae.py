@@ -361,8 +361,9 @@ class VAE(object):
                 self.accumulated_cost += cost
                 if cost < self.best_cost:
                     self.best_cost = cost
-                    self.settings['best_cost'] = {'ELBO': cost, 'KL(q(z|x) || p(z))': kl_loss,
-                                                  'reconstruction_loss': rec_loss}
+                    self.settings['best_cost'] = {'ELBO': float(cost),
+                                                  'KL(q(z|x) || p(z))': float(kl_loss),
+                                                  'reconstruction_loss': float(rec_loss)}
 
                 total_cost_history = np.hstack((total_cost_history, np.array([float(cost)])))
                 KL_cost_history = np.hstack((KL_cost_history, np.array([float(kl_loss)])))
