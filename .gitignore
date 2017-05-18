@@ -8,6 +8,7 @@
 *.pyc
 *.DS_Store
 
+how_to_load_tensors.py
 log/
 training/saved_models/
 __pycache__/

@@ -118,48 +118,49 @@ class VAE(object):
 
             prelatent_layer = self.encoder(input_ph)
 
-            z_mean = Dense(scope="z_mean", size=self.latent_dim,
+            z0_mean = Dense(scope="z0_mean", size=self.latent_dim,
                            initializer=variance_scaling_initializer(scale=2.0, mode="fan_in", distribution="normal"))(prelatent_layer)
-            z_log_sigma = Dense(scope="z_log_sigma", size=self.latent_dim,
+            z0_log_sigma = Dense(scope="z0_log_sigma", size=self.latent_dim,
                                 initializer=variance_scaling_initializer(scale=2.0, mode="fan_in", distribution="normal"))(prelatent_layer)
 
             prior = DiagonalGaussian(tf.zeros(self.latent_dim), tf.ones(self.latent_dim))  # N(0, 1)
-            posterior = DiagonalGaussian(z_mean, z_log_sigma)
+            posterior = DiagonalGaussian(z0_mean, z0_log_sigma)
 
-            tf.add_to_collection(VAE.DEBUG_KEY + 'z_mean', z_mean)
-            tf.add_to_collection(VAE.DEBUG_KEY + 'z_log_sigma', z_log_sigma)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z0_mean', z0_mean)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z0_log_sigma', z0_log_sigma)
 
             print("Finished setting up encoder")
             print([var._variable for var in tf.global_variables()])
 
-            print('z_mean shape: ', z_mean.get_shape())
-            print('z_log_sigma shape: ', z_log_sigma.get_shape())
+            print('z0_mean shape: ', z0_mean.get_shape())
+            print('z0_log_sigma shape: ', z0_log_sigma.get_shape())
 
-            z = posterior.sample()
-            print("Posterior sample shape: ", z.get_shape())
+            z0 = posterior.sample()
+            print("Posterior sample shape: ", z0.get_shape())
 
-            # z = self.sampleGaussian(z_mean, z_log_sigma)  # (batch_size, latent_dim)
-            self.z = z ## TO REMOVE - DEBUGGING ONLY
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z0', z0)
 
-            tf.add_to_collection(VAE.DEBUG_KEY + 'z', z)
-
-            logqs = posterior.logprob(z)
+            logqs = posterior.logprob(z0)
 
             # IAF Posterior
             # Create two AR layers
-            first_AR_Dense = AR_Dense(self.latent_dim,
+            first_AR_Dense = AR_Dense(8,
                                       variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
                                       zerodiagonal=False, scope='ar_layer1', nonlinearity=tf.nn.elu)
-            second_AR_Dense_to_mean = AR_Dense(self.latent_dim,
+            second_AR_Dense = AR_Dense(8,
+                                      variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
+                                      zerodiagonal=False, scope='ar_layer2', nonlinearity=tf.nn.elu)
+            AR_Dense_to_mean = AR_Dense(self.latent_dim,
                                                variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
-                                               zerodiagonal=True, scope='ar_layer2_mean')
-            second_AR_Dense_to_logsigma = AR_Dense(self.latent_dim,
+                                               zerodiagonal=True, scope='ar_layer_mean')
+            AR_Dense_to_logsigma = AR_Dense(self.latent_dim,
                                                    variance_scaling_initializer(scale=2.0, mode="fan_avg", distribution="normal"),
-                                                   zerodiagonal=True, scope='ar_layer2_logsd')
+                                                   zerodiagonal=True, scope='ar_layer_logsd')
 
-            hidden_AR_layer = first_AR_Dense(z)
-            ar_mean = second_AR_Dense_to_mean(hidden_AR_layer)
-            ar_logsigma = second_AR_Dense_to_logsigma(hidden_AR_layer)
+            z1 = first_AR_Dense(z0)
+            z2 = second_AR_Dense(z1)
+            ar_mean = AR_Dense_to_mean(z2)
+            ar_logsigma = AR_Dense_to_logsigma(z2)
 
             tf.add_to_collection(VAE.DEBUG_KEY + 'ar_mean', ar_mean)
             tf.add_to_collection(VAE.DEBUG_KEY + 'ar_logsigma', ar_logsigma)
@@ -167,30 +168,34 @@ class VAE(object):
             # self.ar_mean = ar_mean  # for debugging
             # self.ar_logsigma = ar_logsigma  # for debugging
 
-            z = (z - ar_mean) / tf.exp(ar_logsigma)
-            print("Post AR z.shape", z.get_shape())
+            z3 = (z2 - ar_mean) / tf.exp(ar_logsigma)
+            print("Post AR z.shape", z3.get_shape())
 
-            tf.add_to_collection(VAE.DEBUG_KEY + 'z', z)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z1', z1)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z2', z2)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'z3', z3)
 
             self.first_ar_layer_weights = first_AR_Dense.w  # for debugging
-            self.second_ar_layer_weights_mean = second_AR_Dense_to_mean.w  # for debugging
-            self.second_ar_layer_weights_logsigma = second_AR_Dense_to_logsigma.w  # for debugging
+            self.second_ar_layer_weights_mean = AR_Dense_to_mean.w  # for debugging
+            self.second_ar_layer_weights_logsigma = AR_Dense_to_logsigma.w  # for debugging
 
             tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer1_w', first_AR_Dense.w)
             tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer1_b', first_AR_Dense.b)
-            
-            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_mean_w', second_AR_Dense_to_mean.w)
-            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_logsd_w', second_AR_Dense_to_logsigma.w)
-            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_mean_b', second_AR_Dense_to_mean.b)
-            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_logsd_b', second_AR_Dense_to_logsigma.b)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_w', second_AR_Dense.w)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer2_b', second_AR_Dense.b)
+
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer_mean_w', AR_Dense_to_mean.w)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_w', AR_Dense_to_logsigma.w)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer_mean_b', AR_Dense_to_mean.b)
+            tf.add_to_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_b', AR_Dense_to_logsigma.b)
 
             logqs += ar_logsigma
-            logps = prior.logprob(z)
+            logps = prior.logprob(z3)
             kl_obj = logqs - logps  # (batch_size, latent_dim)
 
             kl_obj = tf.reduce_sum(kl_obj, [1])
 
-            vae_output = self.decoder(z)  # (batch_size, n_outputs)
+            vae_output = self.decoder(z3)  # (batch_size, n_outputs)
             print("vae output shape: ", vae_output.get_shape())
 
             print("Finished setting up decoder")
@@ -205,7 +210,7 @@ class VAE(object):
             print('kl_obj shape:', kl_obj.get_shape())
 
             # # Kullback-Leibler divergence: mismatch b/w approximate vs. imposed/true posterior
-            # kl_loss = self.kullback_leibler_diag_gaussian(z_mean, z_log_sigma)
+            # kl_loss = self.kullback_leibler_diag_gaussian(z0_mean, z0_log_sigma)
             # print('kl_loss shape:', kl_loss.get_shape())
 
             with tf.name_scope("cost"):
@@ -374,7 +379,7 @@ class VAE(object):
     def test(self, dataset, iterations):
         print("Some example test minibatch costs: ")
         for _ in range(iterations):
-            x = dataset.next_batch()  # (batch_size, n_inputs)
+            x, labels = dataset.next_batch(images_only=False)  # (batch_size, n_inputs)
             feed_dict = {self.input_ph: x}
 
             fetches = [self.vae_output, self.cost, self.kl_loss, self.cost_no_KL, self.global_step]
@@ -384,17 +389,82 @@ class VAE(object):
 
             z_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z_mean')
             z_log_sigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z_log_sigma')
-            z = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z')
+            z0 = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z0')
+            z3 = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z3')
+
             ar_mean = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_mean')
             ar_logsigma = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_logsigma')
-            z = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'z')
             ar_layer1_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer1_w')
-            ar_layer2_mean_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_mean_w')
-            ar_layer2_logsd_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_logsd_w')
+            ar_layer1_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer1_b')
+            ar_layer2_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_w')
+            ar_layer2_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer2_b')
+            ar_layer_mean_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_mean_w')
+            ar_layer_mean_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_mean_b')
+            ar_layer_logsd_w = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_w')
+            ar_layer_logsd_b = self.sess.graph.get_collection(VAE.DEBUG_KEY + 'ar_layer_logsd_b')
 
-            # print(self.sess.run(z_mean, feed_dict=feed_dict))
-            print(self.sess.run(ar_layer1_w))
-            print(self.sess.run(ar_layer2_mean_w))
+            # Evaluate the above tensors
+            z0_sample = self.sess.run(z0, feed_dict)
+            z3_sample = self.sess.run(z3, feed_dict)  # Final Posterior approximation
+            z3_2nd_sample = self.sess.run(z3, feed_dict)
+            ar_mean_eval = self.sess.run(ar_mean, feed_dict)[0]
+            ar_logsigma_eval = self.sess.run(ar_logsigma, feed_dict)[0]
 
-            print(self.sess.run(ar_mean, feed_dict=feed_dict))
-            asdfasdf
+            ar_layer1_w_eval = self.sess.run(ar_layer1_w)
+            ar_layer1_b_eval = self.sess.run(ar_layer1_b)
+            ar_layer_mean_w_eval = self.sess.run(ar_layer_mean_w)
+            ar_layer_mean_b_eval = self.sess.run(ar_layer_mean_b)
+            ar_layer_logsd_w_eval = self.sess.run(ar_layer_logsd_w)
+            ar_layer_logsd_b_eval = self.sess.run(ar_layer_logsd_b)
+
+            print('ar_layer1_w:\n', ar_layer1_w_eval)
+            print('ar_layer1_b:\n', ar_layer1_b_eval)
+            print('ar_layer_mean_w:\n', ar_layer_mean_w_eval)
+            print('ar_layer_mean_b:\n', ar_layer_mean_b_eval)
+            print('ar_layer_logsd_w:\n', ar_layer_logsd_w_eval)
+            print('ar_layer_logsd_b:\n', ar_layer_logsd_b_eval)
+
+            print("")
+            print("************")
+            print("")
+            print("ar_mean:")
+            print(ar_mean_eval)
+            print("")
+            print("ar_logsd:")
+            print(ar_logsigma_eval)
+
+
+
+            import matplotlib.pyplot as plt
+
+            plt.figure()
+            plt.title("z0 of VAE")
+            colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
+            scatter_pts = []  # To store a list of np.arrays for each digit
+            for i in range(10):
+                idx = (labels == i)
+                scatter_pts.append(plt.scatter(z0_sample[idx, 0], z0_sample[idx, 1], color=colours[i], alpha=0.8))
+            plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+                       loc='upper right')
+
+            plt.figure()
+            plt.title("z3 of VAE")
+            colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
+            scatter_pts = []  # To store a list of np.arrays for each digit
+            for i in range(10):
+                idx = (labels == i)
+                scatter_pts.append(plt.scatter(z3_sample[idx, 0], z3_sample[idx, 1], color=colours[i], alpha=0.8))
+            plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+                       loc='upper right')
+
+            plt.figure()
+            plt.title("z3 (2nd sample) of VAE")
+            colours = ['b', 'c', 'y', 'm', 'r', 'k', 'g', (0.2, 0.4, 0.6), (0.8, 0.3, 0.5), (0.1, 0.1, 0.5)]
+            scatter_pts = []  # To store a list of np.arrays for each digit
+            for i in range(10):
+                idx = (labels == i)
+                scatter_pts.append(plt.scatter(z3_2nd_sample[idx, 0], z3_2nd_sample[idx, 1], color=colours[i], alpha=0.8))
+            plt.legend(tuple([scatter_object for scatter_object in scatter_pts]), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+                       loc='upper right')
+
+            plt.show()

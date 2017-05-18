@@ -10,7 +10,7 @@ from data_utils import DatasetFeed
 from tensorflow.python.ops.init_ops import variance_scaling_initializer
 import matplotlib.pyplot as plt
 
-MODEL_TO_RESTORE = 'training/saved_models/170517_2314/model-500000'
+MODEL_TO_RESTORE = 'training/saved_models/170518_0919/model-50000'
 # MODEL_TO_RESTORE = None
 
 
@@ -54,6 +54,8 @@ if __name__ == '__main__':
         vae.train(train_data, max_iter=MAX_ITER, max_epochs=np.inf, verbose=True, save=True)
     else:
         vae = VAE(encoder, decoder, LATENT_DIM, model_to_restore=MODEL_TO_RESTORE)
+
+        train_data.shuffle_dataset()  # Just so plots are different every time
         vae.test(train_data, 10)  # Test the model on 10 minibatches
 
         ###################### MAKE PLOTS ##########################
@@ -95,6 +97,17 @@ if __name__ == '__main__':
 
 
         print("Making generated figures for given latent variable...", end="")
+        # plot_generation(vae, np.array([[-0.3, -0.3]]), data_minibatch_images, data_minibatch_labels,
+        #                 outdir=PLOT_DIR, filename="Example generations 1.png")
+        # plot_generation(vae, np.array([[-2, -3]]), data_minibatch_images, data_minibatch_labels,
+        #                 outdir=PLOT_DIR, filename="Example generations 2.png")
+        # plot_generation(vae, np.array([[1.4, 2.5]]), data_minibatch_images, data_minibatch_labels,
+        #                 outdir=PLOT_DIR, filename="Example generations 3.png")
+        # plot_generation(vae, np.array([[1.7, -0.1]]), data_minibatch_images, data_minibatch_labels,
+        #                 outdir=PLOT_DIR, filename="Example generations 4.png")
+        # plot_generation(vae, np.array([[2.5, 0]]), data_minibatch_images, data_minibatch_labels,
+        #                 outdir=PLOT_DIR, filename="Example generations 5.png")
+
         plot_generation(vae, np.array([[-0.3, -0.3]]), data_minibatch_images, data_minibatch_labels,
                         outdir=PLOT_DIR, filename="Example generations 1.png")
         plot_generation(vae, np.array([[-2, -3]]), data_minibatch_images, data_minibatch_labels,
@@ -105,6 +118,7 @@ if __name__ == '__main__':
                         outdir=PLOT_DIR, filename="Example generations 4.png")
         plot_generation(vae, np.array([[2.5, 0]]), data_minibatch_images, data_minibatch_labels,
                         outdir=PLOT_DIR, filename="Example generations 5.png")
+
         print('done.')
 
         print("Making movie...", end="")
