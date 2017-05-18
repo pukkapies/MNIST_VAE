@@ -168,7 +168,7 @@ class VAE(object):
             # self.ar_mean = ar_mean  # for debugging
             # self.ar_logsigma = ar_logsigma  # for debugging
 
-            z3 = (z2 - ar_mean) / tf.exp(ar_logsigma)
+            z3 = (z0 - ar_mean) / tf.exp(ar_logsigma)
             print("Post AR z.shape", z3.get_shape())
 
             tf.add_to_collection(VAE.DEBUG_KEY + 'z1', z1)
