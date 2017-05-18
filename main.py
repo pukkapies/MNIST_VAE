@@ -12,8 +12,8 @@ from make_plots import plot_reconstruction, plot_in_latent_space, plot_dataset_e
 from utils.data_utils import DatasetFeed
 from vae import VAE
 
-MODEL_TO_RESTORE = 'training/saved_models/170518_1455/model-100000'
-# MODEL_TO_RESTORE = None
+# MODEL_TO_RESTORE = 'training/saved_models/170518_1455/model-100000'
+MODEL_TO_RESTORE = None
 
 
 IMAGE_SIZE = 28*28
