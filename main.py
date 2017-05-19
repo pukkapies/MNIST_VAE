@@ -12,7 +12,7 @@ from make_plots import plot_reconstruction, plot_in_latent_space, plot_dataset_e
 from utils.data_utils import DatasetFeed
 from vae import VAE
 
-MODEL_TO_RESTORE = 'training/saved_models/170518_2135/model-415000 (3 layer IAF)'
+MODEL_TO_RESTORE = 'training/saved_models/170518_2219 (4D_latent)/model-500000'
 # MODEL_TO_RESTORE = None
 
 
@@ -125,13 +125,13 @@ if __name__ == '__main__':
 
             print('done.')
 
-        print("Making movie...", end="")
-        number_of_cycles = 10
-        circle_param = np.linspace(0, number_of_cycles*2*np.pi, num=number_of_cycles * 120)
-        zs_list = [np.array([3 * np.sin(0.3 * circle_param[i]) * np.cos(circle_param[i]),
-                             3 * np.sin(0.3 * circle_param[i]) * np.sin(circle_param[i])]) for i in range(circle_param.shape[0])]
-        zs = np.asarray(zs_list)
-        plot_generation_movie(vae, zs, outdir=PLOT_DIR)
-        # plot_generation_movie_subplots(vae, zs, data_minibatch_images, data_minibatch_labels, save=False,
-        #                                outdir=PLOT_DIR, filename="Generation movie subplots")
-        print('done.')
+            print("Making movie...", end="")
+            number_of_cycles = 10
+            circle_param = np.linspace(0, number_of_cycles*2*np.pi, num=number_of_cycles * 120)
+            zs_list = [np.array([3 * np.sin(0.3 * circle_param[i]) * np.cos(circle_param[i]),
+                                 3 * np.sin(0.3 * circle_param[i]) * np.sin(circle_param[i])]) for i in range(circle_param.shape[0])]
+            zs = np.asarray(zs_list)
+            plot_generation_movie(vae, zs, outdir=PLOT_DIR)
+            # plot_generation_movie_subplots(vae, zs, data_minibatch_images, data_minibatch_labels, save=False,
+            #                                outdir=PLOT_DIR, filename="Generation movie subplots")
+            print('done.')

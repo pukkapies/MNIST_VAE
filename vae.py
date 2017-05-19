@@ -49,15 +49,16 @@ class VAE(object):
                many of the former build options are ignored
         """
         self.sess = tf.Session()
-        self.settings = VAE.DEFAULTS
-        self.settings.update({'encoder_settings': encoder.settings,
-                                             'decoder_settings': decoder.settings,
-                                             'latent_dim': latent_dim,
-                                             'scope': scope})
-        self.settings.update(**d_hyperparams)
 
         if model_to_restore is None:
             print("Building new VAE model")
+            self.settings = VAE.DEFAULTS
+            self.settings.update({'encoder_settings': encoder.settings,
+                                  'decoder_settings': decoder.settings,
+                                  'latent_dim': latent_dim,
+                                  'scope': scope})
+            self.settings.update(**d_hyperparams)
+
             self.encoder = encoder
             self.decoder = decoder
             self.latent_dim = latent_dim
